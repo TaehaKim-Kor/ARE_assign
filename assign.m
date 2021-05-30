@@ -1,6 +1,6 @@
 clear all; close all;
 %% calibration part for estimating 0deg-Galaxy camera parameter
-calibimgset =imageSet(fullfile('C:\Users\anstn\Desktop\대학원 2학년\대학원강의\김동환교수님 고급로봇공학\과제2\','calib'));
+calibimgset =imageSet(fullfile('calib'));
 imageFileNames = calibimgset.ImageLocation;
 [imagePoints, boardSize] = detectCheckerboardPoints(imageFileNames);
 squareSizeInMM = 16;
@@ -14,7 +14,7 @@ params = estimateCameraParameters(imagePoints,worldPoints, ...
 %showExtrinsics(params);
 intmatG=params.IntrinsicMatrix;
 %% calibration part for estimating 45deg-Iphone camera parameter
-calibimgset =imageSet(fullfile('C:\Users\anstn\Desktop\대학원 2학년\대학원강의\김동환교수님 고급로봇공학\과제2\','calib2'));
+calibimgset =imageSet(fullfile('calib2'));
 imageFileNames = calibimgset.ImageLocation;
 [imagePoints, boardSize] = detectCheckerboardPoints(imageFileNames);
 squareSizeInMM = 16;
@@ -28,8 +28,10 @@ params = estimateCameraParameters(imagePoints,worldPoints, ...
 %showExtrinsics(params);
 intmatA=params.IntrinsicMatrix;
 %% epipolar line searching process
-deg00_img=imread('C:\Users\anstn\Desktop\대학원 2학년\대학원강의\김동환교수님 고급로봇공학\과제2\G000.jpg');
-deg45_img=imread('C:\Users\anstn\Desktop\대학원 2학년\대학원강의\김동환교수님 고급로봇공학\과제2\A045.jpg');
+deg00_img=imread('G000.jpg');
+deg00_img=im2double(deg00_img);
+deg45_img=imread('A045.jpg');
+deg45_img=im2double(deg45_img);
 
 fx1 = intmatG(1);
 fy1 = intmatG(5);
@@ -99,7 +101,7 @@ for i = 1:length(searchspace)
     for x=-searchrange:searchrange
         for y=-searchrange:searchrange
             % 중심의 좌표 (x,y)가 searchspace(i,1)+x, searchspace(i,2)+y인 점에서
-            % calculrange 안에 들어오는 모든 점의 L2 Norm을 계산하는 코드.
+            % calculrange 안에 들어오는 모든 점의 Cost 함수를 계산하는 코드.
             if searchspace(i,1)+x >= 1 && searchspace(i,1)+x <= size(deg45_img,2) && searchspace(i,2) + y >= 1 && searchspace(i,2) + y <= size(deg45_img,1) && visit(searchspace(i,2) + y,searchspace(i,1) + x) == 0
                 up_limit = max(1,searchspace(i,2)+y-calculrange);
                 down_limit = min(size(deg45_img,1),searchspace(i,2)+y+calculrange);
@@ -163,14 +165,25 @@ end
 
 %Pearson Correlation Coefficient
 function cost = Patch_PCC(cmp,tgt)
-cmp=im2double(cmp);
-tgt=im2doulbe(tgt);
 cost = [];
 for i=1:size(cmp,3)
-    %enum=sum((tgt(:,:,i)-mean(tgt(:,:,i),'all').*(cmp(:,:,i)-mean(cmp(:,:,i),'all'))),'all')
-    %denum=
-    ecost = sum((tgt(:,:,i)-mean(tgt(:,:,i),'all').*(cmp(:,:,i)-mean(cmp(:,:,i),'all'))),'all')/(sum((tgt(:,:,i)-mean(tgt(:,:,i),'all').^2),'all')*sum((cmp(:,:,i)-mean(cmp(:,:,i),'all').^2),'all'))^0.5;
+    enum=sum((tgt(:,:,i)-mean(tgt(:,:,i),'all').*(cmp(:,:,i)-mean(cmp(:,:,i),'all'))),'all');
+    denum=(sum((tgt(:,:,i)-mean(tgt(:,:,i),'all').^2),'all')*sum((cmp(:,:,i)-mean(cmp(:,:,i),'all').^2),'all'))^0.5;
+    ecost = enum/denum;
+    %ecost = sum((tgt(:,:,i)-mean(tgt(:,:,i),'all').*(cmp(:,:,i)-mean(cmp(:,:,i),'all'))),'all')/(sum((tgt(:,:,i)-mean(tgt(:,:,i),'all').^2),'all')*sum((cmp(:,:,i)-mean(cmp(:,:,i),'all').^2),'all'))^0.5;
     cost = [cost,ecost];
 end
 cost = norm(cost);
+end
+
+function cost = Patch_CC(cmp,tgt)
+cost = [];
+for i=1:size(cmp,3)
+    restgt=reshape(tgt(:,:,i),[size(tgt(:,:,i),1)*size(tgt(:,:,i),2),1]);
+    rescmp=reshape(tgt(:,:,i),[size(cmp(:,:,i),1)*size(cmp(:,:,i),2),1]);
+    Cor=corrcoef(restgt,rescmp);
+    ecost=Cor(2);
+    cost = [cost,ecost];
+end
+cost=norm(cost);
 end
