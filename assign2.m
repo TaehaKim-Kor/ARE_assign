@@ -82,6 +82,7 @@ hold on;
 s=scatter(u1,v1);
 s.LineWidth=2;
 plot(x+size(deg00_img,2),round(Equ(1)*x/Equ(2)+Equ(3)/Equ(2)));
+hold off;
 %% True correspondence searching process
 searchspace=[];
 % y픽셀 300~2324 내에서만 검색(하얀부분이 계속 검색되었음)
